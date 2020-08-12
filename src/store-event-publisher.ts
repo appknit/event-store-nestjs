@@ -18,6 +18,10 @@ export class StoreEventPublisher {
   mergeClassContext<T extends Constructor<AggregateRootAsync>>(metatype: T): T {
     const eventBus = this.eventBus;
     return class extends metatype {
+      constructor(...args) {
+        super(...args);
+      }
+
       publish(event: IEvent) {
         eventBus.publish(event);
       }
