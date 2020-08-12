@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { StoreEventBus } from './store-event-bus';
 import { IEvent, AggregateRoot } from '@nestjs/cqrs';
 
-export declare abstract class AggregateRootAsync extends AggregateRoot {
+export declare abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> extends AggregateRoot {
   publishAsync(event: IEvent): Promise<void>;
   commitAsync(): Promise<void>;
+  apply<T extends EventBase = EventBase>(event: T, isFromHistory?: boolean): void;
 }
 
 export interface Constructor<T> {
@@ -41,7 +42,6 @@ export class StoreEventPublisher {
 
   mergeObjectContext<T extends AggregateRootAsync>(object: T): T {
     const eventBus = this.eventBus;
-
     object.publish = (event: IEvent) => {
       eventBus.publish(event);
     };
