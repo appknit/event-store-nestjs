@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { StoreEventBus } from './store-event-bus';
 import { IEvent, AggregateRoot } from '@nestjs/cqrs';
 
+export declare abstract class AggregateRootAsync extends AggregateRoot {
+  publishAsync(event: IEvent): Promise<void>;
+  commitAsync(): Promise<void>;
+}
+
 export interface Constructor<T> {
   new (...args: any[]): T;
 }
@@ -10,20 +15,44 @@ export interface Constructor<T> {
 export class StoreEventPublisher {
   constructor(private readonly eventBus: StoreEventBus) {}
 
-  mergeClassContext<T extends Constructor<AggregateRoot>>(metatype: T): T {
+  mergeClassContext<T extends Constructor<AggregateRootAsync>>(metatype: T): T {
     const eventBus = this.eventBus;
     return class extends metatype {
       publish(event: IEvent) {
         eventBus.publish(event);
       }
+
+      publishAsync = async (event: IEvent) => {
+        await eventBus.publishAsync(event);
+      }
+
+      commitAsync = async () => {
+        const events = this.getUncommittedEvents()
+        const promises = events.map((event) => this.publishAsync(event));
+        await Promise.all(promises);
+        this.uncommit();
+      }
     };
   }
 
-  mergeObjectContext<T extends AggregateRoot>(object: T): T {
+  mergeObjectContext<T extends AggregateRootAsync>(object: T): T {
     const eventBus = this.eventBus;
+
     object.publish = (event: IEvent) => {
       eventBus.publish(event);
     };
+
+    object.publishAsync = async (event: IEvent) => {
+      await eventBus.publishAsync(event);
+    };
+
+    object.commitAsync = async () => {
+      const events = object.getUncommittedEvents()
+      const promises = events.map((event) => object.publishAsync(event));
+      await Promise.all(promises);
+      object.uncommit();
+    }
+
     return object;
   }
 }

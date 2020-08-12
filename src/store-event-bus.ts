@@ -11,6 +11,23 @@ export class StoreEventBus implements IEventBus {
     private readonly eventStore: EventStore,
   ) {}
 
+  async publishAsync<T extends IEvent>(event: T): Promise<void> {
+    const storableEvent = (event as any) as StorableEvent;
+    if (
+      storableEvent.id === undefined ||
+      storableEvent.eventAggregate === undefined ||
+      storableEvent.eventVersion === undefined
+    ) {
+      throw new Error('Events must implement StorableEvent interface');
+    }
+    try {
+      await this.eventStore.storeEvent(storableEvent)
+      return this.eventBus.publish(event);
+    } catch (err) {
+      throw err;
+    }
+  }
+
   publish<T extends IEvent>(event: T): void {
     const storableEvent = (event as any) as StorableEvent;
     if (
