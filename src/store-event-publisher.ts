@@ -1,12 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { StoreEventBus } from './store-event-bus';
-import { IEvent, AggregateRoot } from '@nestjs/cqrs';
-
-export declare abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> extends AggregateRoot {
-  publishAsync(event: IEvent): Promise<void>;
-  commitAsync(): Promise<void>;
-  apply<T extends EventBase = EventBase>(event: T, isFromHistory?: boolean): void;
-}
+import { IEvent } from '@nestjs/cqrs';
+import { AggregateRootAsync } from './aggregate-root-async';
 
 export interface Constructor<T> {
   new (...args: any[]): T;

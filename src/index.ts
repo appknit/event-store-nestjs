@@ -6,3 +6,4 @@ export * from './store-event-publisher';
 export * from './view';
 export * from './interfaces';
 export * from './aggregate-repository';
+export * from './aggregate-root-async';
