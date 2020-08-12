@@ -12,6 +12,16 @@ export class ViewEventBus implements IEventBus {
     ) {
     }
 
+    async publishAsync<T extends IEvent>(event: T): Promise<void> {
+        await this.viewUpdater.run(event);
+        try {
+            this.eventBus.publish(event);
+            return;
+        } catch (err) {
+            throw err;
+        }
+    }
+
     publish<T extends IEvent>(event: T): void {
         this.viewUpdater.run(event)
         .then(() => this.eventBus.publish(event))
