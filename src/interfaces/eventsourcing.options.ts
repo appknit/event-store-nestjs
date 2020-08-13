@@ -1,11 +1,9 @@
-import { supportedDatabases } from './database.config';
-
 export interface EventSourcingOptions {
     mongoURL: string;
 }
 
 export interface EventSourcingGenericOptions {
-    dialect: supportedDatabases;
+    dialect: string;
     url?: string;
     host?: string;
     port?: number;
