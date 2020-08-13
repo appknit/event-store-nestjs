@@ -1,6 +1,6 @@
 {
   "name": "event-store-nestjs",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "NestJS module for implementing Event Sourcing.",
   "main": "index.js",
   "scripts": {
@@ -18,8 +18,10 @@
   },
   "dependencies": {
     "@types/node": "^13.5.0",
+    "elasticsearch": "^16.7.1",
     "eventstore": "^1.15.2",
-    "mongodb": "^3.5.2"
+    "mongodb": "^3.5.2",
+    "redis": "^3.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^8.3.5",
@@ -43,7 +45,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArkerLabs/event-sourcing-nestjs.git"
+    "url": "git+https://github.com/spunkypanda/event-store-nestjs.git"
   },
   "keywords": [
     "nestjs",
@@ -52,12 +54,12 @@
     "cqrs",
     "ddd"
   ],
-  "author": "ArkerLabs",
+  "author": "spunkypanda",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ArkerLabs/event-sourcing-nestjs/issues"
+    "url": "https://github.com/spunkypanda/event-store-nestjs/issues"
   },
-  "homepage": "https://github.com/ArkerLabs/event-sourcing-nestjs#readme",
+  "homepage": "https://github.com/spunkypanda/event-store-nestjs#readme",
   "husky": {
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"

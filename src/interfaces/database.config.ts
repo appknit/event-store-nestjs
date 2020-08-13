@@ -3,7 +3,7 @@ export enum supportedDatabases {
   redis = 'redis',
   elasticsearch = 'elasticsearch',
   inmemory = 'inmemory',
-  dynamodb = 'dynamodb',
+  // dynamodb = 'dynamodb',
 }
 
 export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbname]
