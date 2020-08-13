@@ -24,7 +24,7 @@ export class EventStore {
     let parsed: url.UrlWithParsedQuery;
 
     const eventstoreConfig: EventSourcingGenericOptions = {
-      dialect: supportedDatabases.mongodb,
+      dialect: 'mongodb',
       options: {
         ssl: false,
       }
