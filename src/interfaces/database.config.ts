@@ -21,11 +21,11 @@ export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbn
  */
 
 export interface DatabaseConfig {
-  dialect: supportedDatabases,
+  dialect: string,
   url?: string,
   host?: string;
   port?: number;
-  options: {
+  options?: {
     ssl: boolean;
     [key: string]: unknown;
   }

@@ -7,7 +7,7 @@ export interface EventSourcingGenericOptions {
     url?: string;
     host?: string;
     port?: number;
-    options: {
+    options?: {
         ssl: boolean;
         [key: string]: unknown;
     }
