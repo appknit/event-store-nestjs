@@ -24,14 +24,14 @@ export class EventStore {
     let parsed: url.UrlWithParsedQuery;
 
     const eventstoreConfig: EventSourcingGenericOptions = {
-      dialect: 'mongodb',
+      type: 'mongodb',
       options: {
         ssl: false,
       }
     };
 
     if (typeof config.dialect === 'string' && isSupported(config.dialect)) {
-      eventstoreConfig.dialect = config.dialect;
+      eventstoreConfig.type = config.dialect;
     }
 
     if (config.url) {
@@ -46,7 +46,11 @@ export class EventStore {
       eventstoreConfig.port = config.port;
     }
 
-    if (parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {
+    // if (parsed && parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {
+    //   eventstoreConfig.options.ssl = true;
+    // }
+
+    if (parsed?.query?.ssl !== undefined && parsed.query.ssl === 'true') {
       eventstoreConfig.options.ssl = true;
     }
 

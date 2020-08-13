@@ -3,7 +3,7 @@ export interface EventSourcingOptions {
 }
 
 export interface EventSourcingGenericOptions {
-    dialect: string;
+    type: string;
     url?: string;
     host?: string;
     port?: number;
