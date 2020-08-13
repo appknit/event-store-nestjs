@@ -11,7 +11,6 @@
     "prepublish:next": "npm run build",
     "publish:next": "npm publish --access public --tag next",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix && npm run prettier",
-    "postinstall": "cd ./node_modules/event-sourcing-nestjs && npm install && npm run build",
     "prettier": "prettier --write 'src/*.{ts, js}'"
   },
   "dependencies": {
