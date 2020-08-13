@@ -1,18 +1,18 @@
 import { Module, DynamicModule, Scope } from '@nestjs/common';
-import { EventSourcingOptions } from './interfaces';
+import { EventSourcingGenericOptions } from './interfaces';
 import { CqrsModule } from '@nestjs/cqrs';
 import { EventStore } from './eventstore';
 import { createEventSourcingProviders } from './eventsourcing.providers';
 
 @Module({})
 export class EventSourcingModule {
-  static forRoot(options: EventSourcingOptions): DynamicModule {
+  static forRoot(options: EventSourcingGenericOptions): DynamicModule {
     return {
       module: EventSourcingModule,
       providers: [
         {
           provide: EventStore,
-          useValue: new EventStore(options.mongoURL),
+          useValue: new EventStore(options),
         },
       ],
       exports: [EventStore],

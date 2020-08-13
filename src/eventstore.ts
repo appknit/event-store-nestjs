@@ -1,4 +1,6 @@
 import { StorableEvent } from './interfaces/storable-event';
+import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
+import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
 
@@ -6,28 +8,49 @@ export class EventStore {
   private readonly eventstore;
   private eventStoreLaunched = false;
 
-  constructor(mongoURL: string) {
-    let ssl = false;
+  constructor(config: DatabaseConfig) {
+    const eventstoreConfig = this.parseDatabaseConfig(config);
+    this.eventstore = eventstore(eventstoreConfig);
 
-    const parsed = url.parse(mongoURL, true);
-
-    if (parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {
-      ssl = true;
-    }
-
-    this.eventstore = eventstore({
-      type: 'mongodb',
-      url: mongoURL,
-      options: {
-        ssl: ssl,
-      },
-    });
     this.eventstore.init(err => {
       if (err) {
         throw err;
       }
       this.eventStoreLaunched = true;
     });
+  }
+
+  private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
+    let parsed: url.UrlWithParsedQuery;
+
+    const eventstoreConfig: EventSourcingGenericOptions = {
+      dialect: supportedDatabases.mongodb,
+      options: {
+        ssl: false,
+      }
+    };
+
+    if (typeof config.dialect === 'string' && isSupported(config.dialect)) {
+      eventstoreConfig.dialect = config.dialect;
+    }
+
+    if (config.url) {
+      parsed = url.parse(config.url, true);
+    }
+
+    if (config.host) {
+      eventstoreConfig.host = config.host;
+    }
+
+    if (config.port) {
+      eventstoreConfig.port = config.port;
+    }
+
+    if (parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {
+      eventstoreConfig.options.ssl = true;
+    }
+
+    return eventstoreConfig;
   }
 
   public isInitiated(): boolean {
