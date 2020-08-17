@@ -1,6 +1,6 @@
 {
   "name": "event-store-nestjs",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "NestJS module for implementing Event Sourcing.",
   "main": "index.js",
   "scripts": {
@@ -18,9 +18,11 @@
   },
   "dependencies": {
     "@types/node": "^13.5.0",
+    "dot-prop": "^5.2.0",
     "elasticsearch": "^16.7.1",
     "eventstore": "^1.15.2",
-    "mongodb": "^3.5.2",
+    "lodash": "^4.17.20",
+    "mongodb": "^3.5.9",
     "redis": "^3.0.2"
   },
   "devDependencies": {
@@ -64,5 +66,8 @@
     "hooks": {
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "directories": {
+    "doc": "docs"
   }
 }
