@@ -8,10 +8,12 @@ export interface Constructor<T> {
 }
 
 @Injectable()
-export class StoreEventPublisher {
+export class StoreEventPublisher<EventBase extends IEvent = IEvent> {
   constructor(private readonly eventBus: StoreEventBus) {}
 
-  mergeClassContext<T extends Constructor<AggregateRootAsync>>(metatype: T): T {
+  mergeClassContext<T extends Constructor<AggregateRootAsync<EventBase>>>(
+    metatype: T
+  ): T {
     const eventBus = this.eventBus;
     return class extends metatype {
       constructor(...args) {
@@ -35,7 +37,7 @@ export class StoreEventPublisher {
     };
   }
 
-  mergeObjectContext<T extends AggregateRootAsync>(object: T): T {
+  mergeObjectContext<T extends AggregateRootAsync<EventBase>>(object: T): T {
     const eventBus = this.eventBus;
     object.publish = (event: IEvent) => {
       eventBus.publish(event);
