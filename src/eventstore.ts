@@ -3,6 +3,7 @@ import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/da
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
+// import { parse } from 'path';
 
 export class EventStore {
   private readonly eventstore;
@@ -34,16 +35,17 @@ export class EventStore {
       eventstoreConfig.type = config.dialect;
     }
 
-    if (config.url) {
-      parsed = url.parse(config.url, true);
-    }
-
-    if (config.host) {
-      eventstoreConfig.host = config.host;
-    }
-
-    if (config.port) {
-      eventstoreConfig.port = config.port;
+    if (config.uri) {
+      parsed = url.parse(config.uri, true);
+      eventstoreConfig.host = parsed.hostname;
+      eventstoreConfig.port = +parsed.port;
+    } else {
+      if (config.host) {
+        eventstoreConfig.host = config.host;
+      }
+      if (config.port) {
+        eventstoreConfig.port = config.port;
+      }
     }
 
     // if (parsed && parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {

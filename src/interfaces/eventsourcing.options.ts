@@ -4,7 +4,7 @@ export interface EventSourcingOptions {
 
 export interface EventSourcingGenericOptions {
     type: string;
-    url?: string;
+    uri?: string;
     host?: string;
     port?: number;
     options?: {

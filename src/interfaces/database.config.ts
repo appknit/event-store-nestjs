@@ -14,7 +14,7 @@ export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbn
  * Sample DatabaseConfig
  * {
  *  dialect: 'mongodb',
- *  url: 'mongo://localhost:27017/<collectionName>',
+ *  uri: 'mongo://localhost:27017/<collectionName>?useUnifiedTopology=true',
  *  host: 'localhost',
  *  port: 27017, 
  * }
@@ -22,7 +22,7 @@ export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbn
 
 export interface DatabaseConfig {
   dialect: string,
-  url?: string,
+  uri?: string,
   host?: string;
   port?: number;
   options?: {
