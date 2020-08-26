@@ -1,14 +1,13 @@
 import * as oracledb from 'oracledb';
+import * as shortid from 'short-uuid';
 
 import { StorableEvent } from './interfaces/storable-event';
 import { OracleConfig, OracleConnectionOptions } from './interfaces/oracle';
-// import { DatabaseConfig } from './interfaces/database.config';
-// import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
+import { DatabaseConfig } from './interfaces/database.config';
 
 export interface IEventStore {
     isInitiated(): boolean;
-    getEvents(aggregate: string, id: string): Promise<any[]>;
-    // getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
+    getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
     getEvent(number): Promise<StorableEvent>;
     storeEvent<T extends StorableEvent>(event: T): Promise<void>;
 }
@@ -16,6 +15,10 @@ export interface IEventStore {
 const DEFAULT_EVENTS_COLLECTION_NAME = 'events';
 const DEFAULT_SNAPSHOTS_COLLECTION_NAME = 'snapshots';
 const DEFAULT_TRANSACTIONS_COLLECTION_NAME = 'transactions';
+const DEFAULT_OUTPUT_OPTIONS = { outFormat: oracledb.OUT_FORMAT_OBJECT };
+
+export const TIMESTAMP_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+export const DATE_FORMAT = 'DD-MMM-YY';
 
 type Payload = Record<string, any> | null;
 
@@ -44,6 +47,10 @@ export class OracleEventStore implements IEventStore {
   private eventsCollectionName = DEFAULT_EVENTS_COLLECTION_NAME;
   private snapshotsCollectionName = DEFAULT_SNAPSHOTS_COLLECTION_NAME;
   private transactionsCollectionName = DEFAULT_TRANSACTIONS_COLLECTION_NAME;
+
+  static isOracleDatabase(config: DatabaseConfig): boolean {
+    return config.dialect === 'oracledb';
+  }
 
   constructor(config: OracleConfig) {
     const connectionString = this.getConnectionString(config);
@@ -89,11 +96,27 @@ export class OracleEventStore implements IEventStore {
     }
   }
 
-  // async storeTransaction(): Promise<any> {}
-  // async getTransaction(): Promise<any> {}
-
   // TODO:
   // async getFromSnapshot(aggregateId: string): Promise<any> {}
+
+  async getEventsSince(commitStamp: Date, skip = 0, limit = 1000): Promise<StorableEvent[]> {
+    const sql = `SELECT 
+      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      commitSequence, commitStamp, restInCommitStream, dispatched
+    FROM events
+    -- WHERE commitStamp >= TIMESTAMP :timestampString
+    WHERE commitStamp >= :commitStamp
+    OFFSET :skip ROWS 
+    FETCH  NEXT :limit ROWS ONLY `;
+
+    try {
+      const args = { commitStamp, skip, limit };
+      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS);
+      return rows.map(this.getStorableEventFromPayload);
+    } catch (collectionError) {
+      throw collectionError;
+    }
+  }
 
   async getEvent(eventId: string): Promise<StorableEvent> {
     if (this.useSodaApi) return this.getSODAEvent(eventId);
@@ -102,10 +125,14 @@ export class OracleEventStore implements IEventStore {
 
   private async getSQLEvent(eventId: string): Promise<any> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
-    const sql = 'SELECT payload FROM events WHERE id = :id';
+    const sql = `SELECT 
+      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      commitSequence, commitStamp, restInCommitStream, dispatched
+    FROM events WHERE id = :id`;
     try {
     const args = [eventId];
-      const { rows } = await this.connection.execute(sql, args)
+      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS);
+      if (!rows[0]) return null;
       return this.getStorableEventFromPayload(rows[0]);
     } catch (collectionError) {
       throw collectionError;
@@ -128,19 +155,24 @@ export class OracleEventStore implements IEventStore {
     return aggregate + '-' + id;
   }
 
-  async getEvents(aggregate: string, id: string): Promise<Array<any>> {
+  async getEvents(aggregate: string, id: string): Promise<StorableEvent[]> {
     const aggregateId = this.getAggregateId(aggregate, id)
     if (this.useSodaApi) return this.getSODAEvents(aggregateId);
     return this.getSQLEvents(aggregateId);
   }
 
-  private async getSQLEvents(aggregateId: string): Promise<any> {
+  private async getSQLEvents(aggregateId: string): Promise<StorableEvent[]> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
-    const sql = 'SELECT payload FROM events WHERE aggregateId = :id';
+    // const sql = 'SELECT payload FROM events WHERE aggregateId = :id';
+    const sql = `SELECT 
+      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      commitSequence, commitStamp, restInCommitStream, dispatched
+    FROM events WHERE aggregateId = :id`;
+
     try {
     const args = [aggregateId];
-      const { rows } = await this.connection.execute(sql, args)
-      return this.getStorableEventFromPayload(rows[0]);
+      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS)
+      return rows.map(this.getStorableEventFromPayload);
     } catch (collectionError) {
       throw collectionError;
     }
@@ -158,12 +190,12 @@ export class OracleEventStore implements IEventStore {
     }
   }
 
-  async storeEvent(event: StorableEvent): Promise<void> {
+  async storeEvent<T extends StorableEvent>(event: T): Promise<any> {
     if (this.useSodaApi) return this.storeSODAEvent(event);
     return this.storeSQLEvent(event);
   }
 
-  private async storeSODAEvent(event: StorableEvent): Promise<void> {
+  private async storeSODAEvent<T extends StorableEvent>(event: T): Promise<any> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
     const soda = this.connection.getSodaDatabase();
     try {
@@ -175,28 +207,30 @@ export class OracleEventStore implements IEventStore {
     }
   }
 
-  private async storeSQLEvent(event: StorableEvent): Promise<void> {
+  private async storeSQLEvent<T extends StorableEvent>(event: T): Promise<any> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
 
     const sql = `INSERT INTO events(id, streamId, aggregateId, aggregate, context, commitId, payload)
-    VALUES (:eventId, :streamId, :aggregateId, :aggregate, NULL, :commitId, :payload)`;
+    VALUES (:id, :streamId, :aggregateId, :aggregate, NULL, :commitId, :payload)`;
 
     try {
-      const streamId = '';
-      const aggregateId = '';
+      const id = shortid.generate();
       const { id: eventId, eventAggregate: aggregate, ...rest } = event;
+      const aggregateId = this.getAggregateId(aggregate, eventId);
       const payload = JSON.stringify(rest);
 
-      const args = [
-        eventId,
-        streamId,
+      const args = {
+        id,
+        streamId: aggregateId,
         aggregateId,
         aggregate,
-        eventId,
+        commitId: eventId,
         payload,
-      ];
+      };
 
       await this.connection.execute(sql, args);
+      await this.connection.commit();
+      return id;
     } catch (collectionError) {
       throw collectionError;
     }
@@ -218,7 +252,38 @@ export class OracleEventStore implements IEventStore {
   }
 
   private getStorableEventFromPayload(document: any): StorableEvent {
-    const event = JSON.parse(document);
+    const {
+      ID,
+      STREAMID,
+      AGGREGATEID,
+      AGGREGATE,
+      CONTEXT,
+      COMMITID,
+      PAYLOAD,
+      COMMITSEQUENCE,
+      COMMITSTAMP,
+      RESTINCOMMITSTREAM,
+      DISPATCHED,
+    } = document;
+
+    const payload = JSON.parse(PAYLOAD);
+
+    const event = {
+      id: ID,
+      streamId: STREAMID,
+      aggregateId: AGGREGATEID,
+      aggregate: AGGREGATE,
+      eventName: payload.eventName,
+      eventAggregate: payload.eventAggregate,
+      eventVersion: payload.eventVersion,
+      context: CONTEXT,
+      commitId: COMMITID,
+      payload: payload,
+      commitSequence: COMMITSEQUENCE,
+      commitStamp: COMMITSTAMP,
+      restInCommitStream: RESTINCOMMITSTREAM,
+      dispatched: DISPATCHED
+    };
     return event;
   }
 

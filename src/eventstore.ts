@@ -1,24 +1,34 @@
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
+import { OracleEventStore } from './oracle-eventstore'
 import * as eventstore from 'eventstore';
 import * as url from 'url';
-// import { parse } from 'path';
+import { OracleConfig } from './interfaces/oracle';
 
 export class EventStore {
   private readonly eventstore;
+  private oracleEventstore = false;
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
-    const eventstoreConfig = this.parseDatabaseConfig(config);
-    this.eventstore = eventstore(eventstoreConfig);
-
-    this.eventstore.init(err => {
-      if (err) {
-        throw err;
-      }
-      this.eventStoreLaunched = true;
-    });
+    if (OracleEventStore.isOracleDatabase(config)) {
+      const oracleConfig = this.parseOracleConfig(config);
+      this.eventstore = new OracleEventStore(oracleConfig);
+      this.eventstore.connect().then(() => {
+        this.oracleEventstore = true;
+        this.eventStoreLaunched = true;
+      });
+    } else {
+      const eventstoreConfig = this.parseDatabaseConfig(config);
+      this.eventstore = eventstore(eventstoreConfig);
+      this.eventstore.init(err => {
+        if (err) {
+          throw err;
+        }
+        this.eventStoreLaunched = true;
+      });
+    }
   }
 
   private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
@@ -59,6 +69,17 @@ export class EventStore {
     return eventstoreConfig;
   }
 
+  private parseOracleConfig(config: DatabaseConfig): OracleConfig {
+    const { user, password, connectString } = config;
+    const oracleConfig: OracleConfig = {
+      user,
+      password,
+      connectString,
+      useSodaApi: true,
+    };
+    return oracleConfig;
+  }
+
   public isInitiated(): boolean {
     return this.eventStoreLaunched;
   }
@@ -69,7 +90,7 @@ export class EventStore {
   ): Promise<StorableEvent[]> {
     return new Promise<StorableEvent[]>(resolve => {
       this.eventstore.getFromSnapshot(
-        this.getAgrregateId(aggregate, id),
+        this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
           // snapshot.data; // Snapshot
           resolve(
@@ -100,9 +121,14 @@ export class EventStore {
         reject('Event Store not launched!');
         return;
       }
+
+      if (this.oracleEventstore) {
+        return this.eventstore.storeEvent(event);
+      }
+
       this.eventstore.getEventStream(
         {
-          aggregateId: this.getAgrregateId(event.eventAggregate, event.id),
+          aggregateId: this.getAggregateId(event.eventAggregate, event.id),
           aggregate: event.eventAggregate,
         },
         (err, stream) => {
@@ -130,7 +156,7 @@ export class EventStore {
     return Object.assign(Object.create(eventPlain), eventPlain);
   }
 
-  private getAgrregateId(aggregate: string, id: string): string {
+  private getAggregateId(aggregate: string, id: string): string {
     return aggregate + '-' + id;
   }
 }

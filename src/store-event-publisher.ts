@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { StoreEventBus } from './store-event-bus';
+import { StoreEventBus, IEventStore } from './store-event-bus';
 import { IEvent } from '@nestjs/cqrs';
 import { AggregateRootAsync } from './aggregate-root-async';
 
