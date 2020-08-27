@@ -1,24 +1,50 @@
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
+import { OracleEventStore } from './oracle';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
-// import { parse } from 'path';
+import { OracleConfig } from './interfaces/oracle';
+
+const oracleConfig: OracleConfig = {
+  user: 'system',
+  password: 'admin',
+  hostname: '127.0.0.1:1521',
+  useSodaApi: false,
+  servicename: 'ORCLPDB1',
+};
 
 export class EventStore {
   private readonly eventstore;
+  private oracleEventstore = false;
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
-    const eventstoreConfig = this.parseDatabaseConfig(config);
-    this.eventstore = eventstore(eventstoreConfig);
-
-    this.eventstore.init(err => {
-      if (err) {
-        throw err;
-      }
+    this.eventstore = new OracleEventStore(oracleConfig);
+    this.eventstore.connect().then(() => {
+      this.oracleEventstore = true;
       this.eventStoreLaunched = true;
     });
+
+    /*
+    if (OracleEventStore.isOracleDatabase(config) && config as OracleConfig) {
+      const oracleConfig = this.parseOracleConfig(config);
+      this.eventstore = new OracleEventStore(oracleConfig);
+      this.eventstore.connect().then(() => {
+        this.oracleEventstore = true;
+        this.eventStoreLaunched = true;
+      });
+    } else {
+      const eventstoreConfig = this.parseDatabaseConfig(config);
+      this.eventstore = eventstore(eventstoreConfig);
+      this.eventstore.init(err => {
+        if (err) {
+          throw err;
+        }
+        this.eventStoreLaunched = true;
+      });
+    }
+    */
   }
 
   private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
@@ -59,6 +85,17 @@ export class EventStore {
     return eventstoreConfig;
   }
 
+  private parseOracleConfig(config: DatabaseConfig): OracleConfig {
+    const { user, password, connectString } = config;
+    const oracleConfig: OracleConfig = {
+      user,
+      password,
+      connectString,
+      useSodaApi: true,
+    };
+    return oracleConfig;
+  }
+
   public isInitiated(): boolean {
     return this.eventStoreLaunched;
   }
@@ -67,9 +104,13 @@ export class EventStore {
     aggregate: string,
     id: string,
   ): Promise<StorableEvent[]> {
+    if (this.oracleEventstore) {
+      return this.eventstore.getEvents(aggregate, id);
+    }
+
     return new Promise<StorableEvent[]>(resolve => {
       this.eventstore.getFromSnapshot(
-        this.getAgrregateId(aggregate, id),
+        this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
           // snapshot.data; // Snapshot
           resolve(
@@ -83,6 +124,10 @@ export class EventStore {
   }
 
   public async getEvent(index: number): Promise<StorableEvent> {
+    if (this.oracleEventstore) {
+      return this.eventstore.getEvent(index);
+    }
+
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
         if (events.length > 0) {
@@ -100,9 +145,14 @@ export class EventStore {
         reject('Event Store not launched!');
         return;
       }
+
+      if (this.oracleEventstore) {
+        return this.eventstore.storeEvent(event);
+      }
+
       this.eventstore.getEventStream(
         {
-          aggregateId: this.getAgrregateId(event.eventAggregate, event.id),
+          aggregateId: this.getAggregateId(event.eventAggregate, event.id),
           aggregate: event.eventAggregate,
         },
         (err, stream) => {
@@ -124,13 +174,17 @@ export class EventStore {
 
   // Monkey patch to obtain event 'instances' from db
   private getStorableEventFromPayload(payload: any): StorableEvent {
+    if (this.oracleEventstore) {
+      this.eventstore.getStorableEventFromPayload(payload);
+    }
+
     const eventPlain = payload;
     eventPlain.constructor = { name: eventPlain.eventName };
 
     return Object.assign(Object.create(eventPlain), eventPlain);
   }
 
-  private getAgrregateId(aggregate: string, id: string): string {
+  private getAggregateId(aggregate: string, id: string): string {
     return aggregate + '-' + id;
   }
 }

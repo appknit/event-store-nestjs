@@ -4,6 +4,14 @@ import { EventStore } from './eventstore';
 import { StorableEvent } from './interfaces/storable-event';
 import { ViewEventBus } from './view/view-event-bus';
 
+export interface IEventStore {
+    isInitiated(): boolean;
+    getEvents(aggregate: string, id: string): Promise<any[]>;
+    // getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
+    getEvent(number): Promise<StorableEvent>;
+    storeEvent<T extends StorableEvent>(event: T): Promise<void>;
+}
+
 @Injectable()
 export class StoreEventBus implements IEventBus {
   constructor(
