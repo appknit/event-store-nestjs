@@ -1,9 +1,10 @@
 import * as oracledb from 'oracledb';
 import * as shortid from 'short-uuid';
 
-import { StorableEvent } from './interfaces/storable-event';
-import { OracleConfig, OracleConnectionOptions } from './interfaces/oracle';
-import { DatabaseConfig } from './interfaces/database.config';
+import { StorableEvent } from '../interfaces/storable-event';
+import { OracleConfig, OracleConnectionOptions } from '../interfaces/oracle';
+import { DatabaseConfig } from '../interfaces/database.config';
+import tableCreationsScripts from './tables';
 
 export interface IEventStore {
     isInitiated(): boolean;
@@ -22,18 +23,29 @@ export const DATE_FORMAT = 'DD-MMM-YY';
 
 type Payload = Record<string, any> | null;
 
-interface SQLEvent {
-    id?: string;          //              VARCHAR2(64) PRIMARY KEY,
-    streamId?: string;    //        VARCHAR2(256) NOT NULL,
-    aggregateId?: string; //     VARCHAR2(256) NOT NULL,
-    aggregate?: string;   //       VARCHAR2(128) NOT NULL,
-    context?: string;     //         VARCHAR2(256),
-    commitId?: string;    //        VARCHAR2(256) NOT NULL,
-    payload?: Payload;     //         VARCHAR2 (4000)
-    commitSequence: number; //  NUMBER DEFAULT 0,
-    commitStamp: Date;   //  DATE DEFAULT (sysdate),
-    restInCommitStream: boolean; // NUMBER(1) DEFAULT 0,
-    dispatched: boolean;      // NUMBER(1) DEFAULT 0
+export interface EventRecord {
+  id?: string;          //              VARCHAR2(64) PRIMARY KEY,
+  streamId?: string;    //        VARCHAR2(256) NOT NULL,
+  aggregateId?: string; //     VARCHAR2(256) NOT NULL,
+  aggregate?: string;   //       VARCHAR2(128) NOT NULL,
+  context?: string;     //         VARCHAR2(256),
+  commitId?: string;    //        VARCHAR2(256) NOT NULL,
+  payload?: Payload;     //         VARCHAR2 (4000)
+  commitSequence: number; //  NUMBER DEFAULT 0,
+  commitStamp: Date;   //  DATE DEFAULT (sysdate),
+  restInCommitStream: boolean; // NUMBER(1) DEFAULT 0,
+  dispatched: boolean;      // NUMBER(1) DEFAULT 0
+}
+
+export interface SnapshotRecord {
+  snapshotId: string,
+  aggregateId?: string,
+  aggregate?: string,
+  context?: string,
+  revision: number,
+  version: number,
+  commitStamp: Date,
+  data?: Payload;
 }
 
 export const EventStoreLaunchError = new Error('Event store not launched');
@@ -65,15 +77,79 @@ export class OracleEventStore implements IEventStore {
     if (config.transactionsCollectionName) this.transactionsCollectionName = config.transactionsCollectionName;
   }
 
+  private async initializeTables(): Promise<any> {
+    await this.createTableIfNotExists('events', this.eventsCollectionName);
+    await this.createTableIfNotExists('snapshots', this.snapshotsCollectionName);
+    // await this.createTableIfNotExists('transactions', this.transactionsCollectionName);
+  }
+
   async connect(): Promise<any> {
     try {
       const connection = await oracledb.getConnection(this.connectionOptions);
       this.connection = connection;
+      await this.initializeTables()
       this.eventStoreLaunched = true;
       return connection;
     } catch (connectionError) {
       throw connectionError;
     }
+  }
+
+  private async _run(
+    sqlString: string,
+    bindArgs: oracledb.BindParameters,
+  ): Promise<oracledb.Result<unknown>> {
+    return this.connection.execute(sqlString, bindArgs, DEFAULT_OUTPUT_OPTIONS);
+  }
+
+  private async _runAndCommit(
+    sqlString: string,
+    bindArgs: oracledb.BindParameters,
+  ): Promise<oracledb.Result<unknown>> {
+    const result = await this._run(sqlString, bindArgs);
+    await this.connection.commit();
+    return result;
+  }
+
+  private async _rollback(): Promise<any> {
+    return this.connection.rollback();
+  }
+
+  async doesTableExist(tableName: string) {
+    const sql = `SELECT COUNT(*) AS tableCount FROM dba_tables WHERE table_name = :id`;
+    const bindArgs = [tableName.toUpperCase()];
+    const { rows } = await this._run(sql, bindArgs);
+    const [row] = rows;
+    return !!row['TABLECOUNT'];
+  }
+
+  async createTableIfNotExists(tableName: string, alias?: string): Promise<any> {
+    const tableAlias = alias || tableName;
+    const createStatementFunction = tableCreationsScripts[tableName];
+    const createStatement = createStatementFunction(tableAlias);
+    const tableExists = await this.doesTableExist(tableName);
+    if (tableExists) return false;
+    await this._runAndCommit(createStatement, []);
+    return true;
+  }
+
+
+  async deleteTableIfExists(tableName: string) {
+    const tableExists = await this.doesTableExist('events');
+    if (!tableExists) return false;
+    tableName = tableName.toUpperCase()
+    const sql = `DROP TABLE ${tableName} PURGE`;
+    await this._runAndCommit(sql, []);
+    return true;
+  }
+
+  async truncateTableIfExists(tableName: string) {
+    const tableExists = await this.doesTableExist('events');
+    if (!tableExists) return false;
+    tableName = tableName.toUpperCase()
+    const sql = `TRUNCATE TABLE ${tableName}`;
+    await this._run(sql, []);
+    return true;
   }
 
   private getConnectionString(config: OracleConfig): string {
@@ -88,20 +164,55 @@ export class OracleEventStore implements IEventStore {
   async initializeCollection(collectionName: string): Promise<oracledb.SodaCollection> {
     const soda = this.connection.getSodaDatabase();
     try {
-      // const collectionOptions = {};
-      // await soda.createCollection(collectionName, collectionOptions)
       return soda.createCollection(collectionName)
     } catch (collectionError) {
       throw collectionError;
     }
   }
 
-  // TODO:
-  // async getFromSnapshot(aggregateId: string): Promise<any> {}
+  private getSnapshotFromRecord(record: Payload): SnapshotRecord {
+    const { SNAPSHOTID, AGGREGATEID, AGGREGATE, CONTEXT, REVISION, VERSION, COMMITSTAMP, DATA } = record;
+    const snapshot = {
+      snapshotId: SNAPSHOTID,
+      aggregateId: AGGREGATEID,
+      aggregate: AGGREGATE,
+      context: CONTEXT,
+      revision: REVISION,
+      version: VERSION,
+      commitStamp: COMMITSTAMP,
+      data: DATA
+    };
+    return snapshot;
+  }
+
+  async getSnapshot(aggregateId: string): Promise<SnapshotRecord> {
+    const sql = `SELECT
+        id AS SNAPSHOTID, aggregateId, aggregate,
+        context, revision, version, commitStamp,
+        TO_CHAR(data) AS data
+      FROM ${this.snapshotsCollectionName}
+      WHERE aggregate_id = :aggregateId`;
+    const args = { aggregateId };
+    const { rows } = await this._run(sql, args);
+    if (!rows.length) return null;
+    const [row] = rows;
+    return this.getSnapshotFromRecord(row);
+  }
+
+  async getFromSnapshot(aggregateId: string, revMax: number): Promise<any> {
+    const snapshot = await this.getSnapshot(aggregateId);
+    // const events = await this.getSQLEvents(aggregateId);
+    let revMin = 0;
+    if (snapshot && (snapshot.revision !== undefined && snapshot.revision !== null)) {
+      revMin = snapshot.revision + 1;
+    }
+    const stream = await this.getEventStream(aggregateId, revMin, revMax);
+    return [snapshot, stream]; 
+  }
 
   async getEventsSince(commitStamp: Date, skip = 0, limit = 1000): Promise<StorableEvent[]> {
     const sql = `SELECT 
-      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      id, streamId, aggregateId, aggregate, context, commitId, TO_CHAR(payload) AS payload,
       commitSequence, commitStamp, restInCommitStream, dispatched
     FROM events
     -- WHERE commitStamp >= TIMESTAMP :timestampString
@@ -111,12 +222,45 @@ export class OracleEventStore implements IEventStore {
 
     try {
       const args = { commitStamp, skip, limit };
-      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS);
+      const { rows } = await this._run(sql, args);
       return rows.map(this.getStorableEventFromPayload);
     } catch (collectionError) {
       throw collectionError;
     }
   }
+
+  async getEventStream(
+    aggregateId: string,
+    revMin?: number,
+    revMax?: number,
+  ): Promise<any> {
+    return [];
+  }
+
+  async getEventsByRevision(
+    aggregateId: string,
+    revMin?: number,
+    revMax?: number,
+  ): Promise<any> {
+    /*
+    if (typeof revMin === 'function') {
+      callback = revMin;
+      revMin = 0;
+      revMax = -1;
+    } else if (typeof revMax === 'function') {
+      callback = revMax;
+      revMax = -1;
+    }
+
+    if (!aggregateId) {
+      throw new Error('An aggregateId should be passed!');
+    }
+
+    return this.getEventsByRevision(aggregateId, revMin, revMax);
+    */
+   return [];
+  }
+
 
   async getEvent(eventId: string): Promise<StorableEvent> {
     if (this.useSodaApi) return this.getSODAEvent(eventId);
@@ -126,12 +270,12 @@ export class OracleEventStore implements IEventStore {
   private async getSQLEvent(eventId: string): Promise<any> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
     const sql = `SELECT 
-      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      id, streamId, aggregateId, aggregate, context, commitId, TO_CHAR(payload) AS payload,
       commitSequence, commitStamp, restInCommitStream, dispatched
     FROM events WHERE id = :id`;
     try {
-    const args = [eventId];
-      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS);
+      const args = [eventId];
+      const { rows } = await this._run(sql, args);
       if (!rows[0]) return null;
       return this.getStorableEventFromPayload(rows[0]);
     } catch (collectionError) {
@@ -152,7 +296,7 @@ export class OracleEventStore implements IEventStore {
   }
 
   private getAggregateId(aggregate: string, id: string): string {
-    return aggregate + '-' + id;
+    return `${aggregate}-${id}`;
   }
 
   async getEvents(aggregate: string, id: string): Promise<StorableEvent[]> {
@@ -163,15 +307,15 @@ export class OracleEventStore implements IEventStore {
 
   private async getSQLEvents(aggregateId: string): Promise<StorableEvent[]> {
     if (!this.isInitiated()) throw EventStoreLaunchError;
-    // const sql = 'SELECT payload FROM events WHERE aggregateId = :id';
     const sql = `SELECT 
-      id, streamId, aggregateId, aggregate, context, commitId, payload,
+      id, streamId, aggregateId, aggregate, context, commitId, TO_CHAR(payload) AS payload,
       commitSequence, commitStamp, restInCommitStream, dispatched
-    FROM events WHERE aggregateId = :id`;
+    FROM events
+    WHERE aggregateId = :id`;
 
     try {
     const args = [aggregateId];
-      const { rows } = await this.connection.execute(sql, args, DEFAULT_OUTPUT_OPTIONS)
+      const { rows } = await this._run(sql, args)
       return rows.map(this.getStorableEventFromPayload);
     } catch (collectionError) {
       throw collectionError;
@@ -228,8 +372,7 @@ export class OracleEventStore implements IEventStore {
         payload,
       };
 
-      await this.connection.execute(sql, args);
-      await this.connection.commit();
+      await this._runAndCommit(sql, args);
       return id;
     } catch (collectionError) {
       throw collectionError;

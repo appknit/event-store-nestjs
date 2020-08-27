@@ -1,10 +1,18 @@
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
-import { OracleEventStore } from './oracle-eventstore'
+import { OracleEventStore } from './oracle';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
+
+const oracleConfig: OracleConfig = {
+  user: 'system',
+  password: 'admin',
+  hostname: '127.0.0.1:1521',
+  useSodaApi: false,
+  servicename: 'ORCLPDB1',
+};
 
 export class EventStore {
   private readonly eventstore;
@@ -12,7 +20,14 @@ export class EventStore {
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
-    if (OracleEventStore.isOracleDatabase(config)) {
+    this.eventstore = new OracleEventStore(oracleConfig);
+    this.eventstore.connect().then(() => {
+      this.oracleEventstore = true;
+      this.eventStoreLaunched = true;
+    });
+
+    /*
+    if (OracleEventStore.isOracleDatabase(config) && config as OracleConfig) {
       const oracleConfig = this.parseOracleConfig(config);
       this.eventstore = new OracleEventStore(oracleConfig);
       this.eventstore.connect().then(() => {
@@ -29,6 +44,7 @@ export class EventStore {
         this.eventStoreLaunched = true;
       });
     }
+    */
   }
 
   private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
@@ -88,6 +104,10 @@ export class EventStore {
     aggregate: string,
     id: string,
   ): Promise<StorableEvent[]> {
+    if (this.oracleEventstore) {
+      return this.eventstore.getEvents(aggregate, id);
+    }
+
     return new Promise<StorableEvent[]>(resolve => {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
@@ -104,6 +124,10 @@ export class EventStore {
   }
 
   public async getEvent(index: number): Promise<StorableEvent> {
+    if (this.oracleEventstore) {
+      return this.eventstore.getEvent(index);
+    }
+
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
         if (events.length > 0) {
@@ -150,6 +174,10 @@ export class EventStore {
 
   // Monkey patch to obtain event 'instances' from db
   private getStorableEventFromPayload(payload: any): StorableEvent {
+    if (this.oracleEventstore) {
+      this.eventstore.getStorableEventFromPayload(payload);
+    }
+
     const eventPlain = payload;
     eventPlain.constructor = { name: eventPlain.eventName };
 

@@ -1,9 +1,8 @@
 import { OracleEventStore } from './oracle-eventstore';
 import * as shortid from 'short-uuid';
 
-import { OracleConfig } from './interfaces/oracle';
-import { StorableEvent } from './interfaces';
-
+import { OracleConfig } from '../interfaces/oracle';
+import { StorableEvent } from '../interfaces';
 
 const oracleConfig: OracleConfig = {
   user: 'system',
@@ -52,5 +51,3 @@ const init = async () => {
     console.error(err)
   }
 };
-
-init();
