@@ -70,13 +70,18 @@ export class EventStore {
   }
 
   private parseOracleConfig(config: DatabaseConfig): OracleConfig {
-    const { user, password, connectString } = config;
+    const { user, password, hostname, servicename, connectString } = config;
     const oracleConfig: OracleConfig = {
       user,
       password,
+      hostname,
+      servicename,
       connectString,
-      useSodaApi: true,
+      // useSodaApi: true,
     };
+    if (!connectString) {
+      oracleConfig.connectString = OracleEventStore.getConnectionString(config);
+    }
     return oracleConfig;
   }
 

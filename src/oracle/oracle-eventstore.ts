@@ -65,7 +65,7 @@ export class OracleEventStore implements IEventStore {
   }
 
   constructor(config: OracleConfig) {
-    const connectionString = this.getConnectionString(config);
+    const connectionString = OracleEventStore.getConnectionString(config);
     this.useSodaApi = !!config.useSodaApi;
     this.connectionOptions = {
       user: config.user,
@@ -152,7 +152,7 @@ export class OracleEventStore implements IEventStore {
     return true;
   }
 
-  private getConnectionString(config: OracleConfig): string {
+  static getConnectionString(config: OracleConfig): string {
     if (config.connectString) return config.connectString;
     return `${config.hostname}/${config.servicename}`
   }
