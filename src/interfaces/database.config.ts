@@ -28,6 +28,8 @@ export interface DatabaseConfig {
   password?: string;
   connectString?: string;
   host?: string;
+  hostname?: string;
+  servicename?: string;
   port?: number;
   options?: {
     ssl: boolean;

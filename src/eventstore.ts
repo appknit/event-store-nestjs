@@ -6,27 +6,12 @@ import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
 
-const oracleConfig: OracleConfig = {
-  user: 'system',
-  password: 'admin',
-  hostname: '127.0.0.1:1521',
-  useSodaApi: false,
-  servicename: 'ORCLPDB1',
-};
-
 export class EventStore {
   private readonly eventstore;
   private oracleEventstore = false;
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
-    this.eventstore = new OracleEventStore(oracleConfig);
-    this.eventstore.connect().then(() => {
-      this.oracleEventstore = true;
-      this.eventStoreLaunched = true;
-    });
-
-    /*
     if (OracleEventStore.isOracleDatabase(config) && config as OracleConfig) {
       const oracleConfig = this.parseOracleConfig(config);
       this.eventstore = new OracleEventStore(oracleConfig);
@@ -44,7 +29,6 @@ export class EventStore {
         this.eventStoreLaunched = true;
       });
     }
-    */
   }
 
   private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {

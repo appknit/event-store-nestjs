@@ -7,10 +7,10 @@ import { DatabaseConfig } from '../interfaces/database.config';
 import tableCreationsScripts from './tables';
 
 export interface IEventStore {
-    isInitiated(): boolean;
-    getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
-    getEvent(number): Promise<StorableEvent>;
-    storeEvent<T extends StorableEvent>(event: T): Promise<void>;
+  isInitiated(): boolean;
+  getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
+  getEvent(number): Promise<StorableEvent>;
+  storeEvent<T extends StorableEvent>(event: T): Promise<void>;
 }
 
 const DEFAULT_EVENTS_COLLECTION_NAME = 'events';
