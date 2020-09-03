@@ -31,14 +31,22 @@ export class EventStore {
       }
     };
 
+    if (config.options) {
+      eventstoreConfig.options = config.options;
+    }
+
     if (typeof config.dialect === 'string' && isSupported(config.dialect)) {
       eventstoreConfig.type = config.dialect;
     }
 
     if (config.uri) {
-      parsed = url.parse(config.uri, true);
-      eventstoreConfig.host = parsed.hostname;
-      eventstoreConfig.port = +parsed.port;
+      if (config.dialect === 'mongodb') {
+        eventstoreConfig.url = config.uri;
+      } else {
+        parsed = url.parse(config.uri, true);
+        eventstoreConfig.host = parsed.hostname;
+        eventstoreConfig.port = +parsed.port;
+      }
     } else {
       if (config.host) {
         eventstoreConfig.host = config.host;
