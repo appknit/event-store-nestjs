@@ -1,10 +1,11 @@
 {
-  "name": "event-store-nestjs",
+  "name": "event-sourcing-nestjs",
   "version": "1.2.2",
   "description": "NestJS module for implementing Event Sourcing.",
   "main": "index.js",
   "scripts": {
-    "prebuild": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "clean": "rimraf dist",
     "build": "tsc -p tsconfig.json",
     "prepublish:npm": "npm run build",
     "publish:npm": "npm publish --access public",
@@ -40,6 +41,7 @@
     "husky": "^4.2.3",
     "prettier": "^2.0.1",
     "reflect-metadata": "^0.1.13",
+    "rimraf": "^3.0.2",
     "rxjs": "^6.5.4",
     "ts-node": "^8.6.2",
     "tsconfig-paths": "^3.9.0",
