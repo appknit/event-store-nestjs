@@ -23,7 +23,7 @@ export const isSupported = (dbname: string): boolean =>
  */
 
 export interface DatabaseConfig {
-  dialect: supportedDatabases;
+  dialect: string;
   uri?: string;
   user?: string;
   password?: string;
