@@ -1,34 +1,46 @@
-import { StorableEvent } from './interfaces/storable-event';
-import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
-import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
-import * as eventstore from 'eventstore';
+import {
+  DatabaseConfig,
+  EventSourcingGenericOptions,
+  isSupported,
+  StorableEvent,
+  supportedDatabases,
+} from './interfaces';
+import * as eventStore from 'eventstore';
 import * as url from 'url';
-// import { parse } from 'path';
 
 export class EventStore {
-  private readonly eventstore;
+  private eventstore: typeof eventStore;
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
-    const eventstoreConfig = this.parseDatabaseConfig(config);
-    this.eventstore = eventstore(eventstoreConfig);
-
-    this.eventstore.init(err => {
-      if (err) {
-        throw err;
-      }
-      this.eventStoreLaunched = true;
-    });
+    this.initEventStore(config);
   }
 
-  private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
+  private initEventStore(config: DatabaseConfig) {
+    switch (config.dialect) {
+      case supportedDatabases.mongodb:
+        const eventStoreConfig = this.parseDatabaseConfig(config);
+        this.eventstore = eventStore(eventStoreConfig);
+        this.eventstore.init(err => {
+          if (err) {
+            throw err;
+          }
+          this.eventStoreLaunched = true;
+        });
+        break;
+    }
+  }
+
+  private parseDatabaseConfig(
+    config: DatabaseConfig,
+  ): EventSourcingGenericOptions {
     let parsed: url.UrlWithParsedQuery;
 
     const eventstoreConfig: EventSourcingGenericOptions = {
       type: 'mongodb',
       options: {
         ssl: false,
-      }
+      },
     };
 
     if (config.options) {
@@ -77,7 +89,7 @@ export class EventStore {
   ): Promise<StorableEvent[]> {
     return new Promise<StorableEvent[]>(resolve => {
       this.eventstore.getFromSnapshot(
-        this.getAgrregateId(aggregate, id),
+        this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
           // snapshot.data; // Snapshot
           resolve(
@@ -110,7 +122,7 @@ export class EventStore {
       }
       this.eventstore.getEventStream(
         {
-          aggregateId: this.getAgrregateId(event.eventAggregate, event.id),
+          aggregateId: this.getAggregateId(event.eventAggregate, event.id),
           aggregate: event.eventAggregate,
         },
         (err, stream) => {
@@ -138,7 +150,7 @@ export class EventStore {
     return Object.assign(Object.create(eventPlain), eventPlain);
   }
 
-  private getAgrregateId(aggregate: string, id: string): string {
+  private getAggregateId(aggregate: string, id: string): string {
     return aggregate + '-' + id;
   }
 }

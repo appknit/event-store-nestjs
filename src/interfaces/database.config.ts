@@ -3,10 +3,12 @@ export enum supportedDatabases {
   redis = 'redis',
   elasticsearch = 'elasticsearch',
   inmemory = 'inmemory',
+  oracledb = 'oracledb',
   // dynamodb = 'dynamodb',
 }
 
-export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbname]
+export const isSupported = (dbname: string): boolean =>
+  !!supportedDatabases[dbname];
 
 // NOTE: DBs supported by eventstore - [inmemory, mongodb, redis, tingodb, elasticsearch, azuretable, dynamodb]
 
@@ -16,17 +18,20 @@ export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbn
  *  dialect: 'mongodb',
  *  uri: 'mongo://localhost:27017/<collectionName>?useUnifiedTopology=true',
  *  host: 'localhost',
- *  port: 27017, 
+ *  port: 27017,
  * }
  */
 
 export interface DatabaseConfig {
-  dialect: string,
-  uri?: string,
+  dialect: supportedDatabases;
+  uri?: string;
+  user?: string;
+  password?: string;
+  connectString?: string;
   host?: string;
   port?: number;
   options?: {
     ssl: boolean;
     [key: string]: unknown;
-  }
+  };
 }
