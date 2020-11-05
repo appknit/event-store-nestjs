@@ -13,7 +13,7 @@
     "publish:next": "npm publish --access public --tag next",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix && npm run prettier",
     "prettier": "prettier --write \"src/**/*.ts\"",
-    "deps-update": "ncu --packageFile package.json -i"
+    "deps-update": "npx npm-check-updates --packageFile package.json -i"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
