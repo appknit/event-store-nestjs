@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { IEvent } from '@nestjs/cqrs/dist/interfaces';
 import { EventStore } from './eventstore';
 import { StorableEvent } from './interfaces';
-import { IAppKnitEventBus, ViewEventBus } from './view';
+import { IExtendedEventBus, ViewEventBus } from './view';
 import { AggregateRootAsync } from './aggregate-root-async';
 
 @Injectable()
-export class StoreEventBus implements IAppKnitEventBus {
+export class StoreEventBus implements IExtendedEventBus {
   constructor(
     private readonly eventBus: ViewEventBus,
     private readonly eventStore: EventStore,
