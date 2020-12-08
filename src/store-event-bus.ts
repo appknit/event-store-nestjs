@@ -35,7 +35,7 @@ export class StoreEventBus implements IExtendedEventBus {
   publish<T extends IEvent>(
     event: T,
     rootAggregator?: AggregateRootAsync,
-  ): void {
+  ): Promise<void> {
     const storableEvent = (event as any) as StorableEvent;
     if (
       storableEvent.id === undefined ||
@@ -44,7 +44,7 @@ export class StoreEventBus implements IExtendedEventBus {
     ) {
       throw new Error('Events must implement StorableEvent interface');
     }
-    this.eventStore
+    return this.eventStore
       .storeEvent(storableEvent)
       .then(() => this.eventBus.publish(event, rootAggregator))
       .catch(err => {
