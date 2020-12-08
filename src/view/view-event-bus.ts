@@ -18,8 +18,7 @@ export class ViewEventBus implements IExtendedEventBus {
   ): Promise<void> {
     try {
       await this.viewUpdater.run(event, rootAggregator);
-      this.eventBus.publish(event);
-      return;
+      return this.eventBus.publish(event);
     } catch (err) {
       throw err;
     }
@@ -28,8 +27,8 @@ export class ViewEventBus implements IExtendedEventBus {
   publish<T extends IEvent>(
     event: T,
     rootAggregator?: AggregateRootAsync,
-  ): void {
-    this.viewUpdater
+  ): Promise<void> {
+    return this.viewUpdater
       .run(event, rootAggregator)
       .then(() => this.eventBus.publish(event))
       .catch(err => {
