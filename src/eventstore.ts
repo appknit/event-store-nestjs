@@ -5,7 +5,7 @@ import { OracleEventStore, SnapshotRecord } from './oracle';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
-import shortUuid = require("short-uuid");
+import * as shortUuid from 'short-uuid'
 
 export class EventStore {
   private readonly eventstore;
