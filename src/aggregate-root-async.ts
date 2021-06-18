@@ -43,7 +43,9 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
   }
 
   loadFromSnapshot({ snapshot, history }) {
-    Object.assign(this, snapshot.data);
+    if (snapshot && snapshot.data) {
+      Object.assign(this, snapshot.data);
+    }
     history.forEach((event) => this.apply(event, true));
   }
 
