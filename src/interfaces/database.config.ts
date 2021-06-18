@@ -17,7 +17,7 @@ export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbn
  *  dialect: 'mongodb',
  *  uri: 'mongo://localhost:27017/<collectionName>?useUnifiedTopology=true',
  *  host: 'localhost',
- *  port: 27017, 
+ *  port: 27017,
  * }
  */
 
@@ -31,6 +31,8 @@ export interface DatabaseConfig {
   hostname?: string;
   servicename?: string;
   port?: number;
+  snapshotsCollectionName?: string;
+  transactionsCollectionName?: string;
   options?: {
     ssl: boolean;
     [key: string]: unknown;
