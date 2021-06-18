@@ -7,8 +7,10 @@ export interface EventSourcingGenericOptions {
     uri?: string;
     host?: string;
     port?: number;
+    snapshotsCollectionName?: string;
+    transactionsCollectionName?: string;
     options?: {
         ssl: boolean;
         [key: string]: unknown;
     }
-} 
+}

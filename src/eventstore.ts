@@ -1,10 +1,11 @@
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
-import { OracleEventStore } from './oracle';
+import { OracleEventStore, SnapshotRecord } from './oracle';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
+import shortUuid = require("short-uuid");
 
 export class EventStore {
   private readonly eventstore;
@@ -58,6 +59,14 @@ export class EventStore {
       }
     }
 
+    if (config.snapshotsCollectionName) {
+      eventstoreConfig.snapshotsCollectionName = config.snapshotsCollectionName;
+    }
+
+    if (config.transactionsCollectionName) {
+      eventstoreConfig.transactionsCollectionName = config.transactionsCollectionName;
+    }
+
     // if (parsed && parsed.query && parsed.query.ssl !== undefined && parsed.query.ssl === 'true') {
     //   eventstoreConfig.options.ssl = true;
     // }
@@ -104,11 +113,60 @@ export class EventStore {
           // snapshot.data; // Snapshot
           resolve(
             stream.events.map(event =>
-              this.getStorableEventFromPayload(event.payload),
+              this.getStorableEventFromPayload(event.payload, event.streamRevision),
             ),
           );
         },
       );
+    });
+  }
+
+  public async getFromSnapshot(
+    aggregate: string,
+    id: string,
+  ): Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}> {
+    // TODO: Fix getEvents for Oracle, not implemented
+    // if (this.oracleEventstore) {
+    //   return this.eventstore.getFromSnapshot(this.getAggregateId(aggregate, id));
+    // }
+
+    return new Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}>(resolve => {
+      this.eventstore.getFromSnapshot(
+        this.getAggregateId(aggregate, id),
+        (err, snapshot, stream) => {
+          const history = stream.events.map(event =>
+            this.getStorableEventFromPayload(event.payload, event.streamRevision),
+          );
+          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // @ts-ignore
+          resolve({ snapshot, history });
+        },
+      );
+    });
+  }
+
+  public async createSnapshot(
+    aggregate: string,
+    id: string,
+    data: Record<string, any> | null,
+    revision?: number,
+    version?: number,
+  ) {
+    const snapshot: SnapshotRecord = {
+      snapshotId: shortUuid.generate(),
+      aggregateId: this.getAggregateId(aggregate, id),
+      aggregate: aggregate,
+      // context?: string,
+      revision: revision,
+      version: version,
+      commitStamp: new Date(),
+      data,
+    };
+    return new Promise(resolve => {
+      this.eventstore.createSnapshot(snapshot, (err) => {
+        if (err) console.error(err);
+        resolve();
+      })
     });
   }
 
@@ -120,7 +178,7 @@ export class EventStore {
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
         if (events.length > 0) {
-          resolve(this.getStorableEventFromPayload(events[0].payload));
+          resolve(this.getStorableEventFromPayload(events[0].payload, events[0].streamRevision));
         } else {
           resolve(null);
         }
@@ -162,12 +220,13 @@ export class EventStore {
   }
 
   // Monkey patch to obtain event 'instances' from db
-  private getStorableEventFromPayload(payload: any): StorableEvent {
+  private getStorableEventFromPayload(payload: any, revision?: number): StorableEvent {
     if (this.oracleEventstore) {
       this.eventstore.getStorableEventFromPayload(payload);
     }
 
     const eventPlain = payload;
+    if (revision) eventPlain.revision = revision;
     eventPlain.constructor = { name: eventPlain.eventName };
 
     return Object.assign(Object.create(eventPlain), eventPlain);
