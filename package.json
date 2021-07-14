@@ -1,6 +1,6 @@
 {
   "name": "event-sourcing-nestjs",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "description": "NestJS module for implementing Event Sourcing.",
   "main": "index.js",
   "scripts": {
