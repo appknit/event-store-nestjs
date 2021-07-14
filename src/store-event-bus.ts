@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { IEvent, IEventBus } from '@nestjs/cqrs/dist/interfaces';
 import { EventStore } from './eventstore';
 import { StorableEvent } from './interfaces/storable-event';
+import { debug } from './util';
 import { ViewEventBus } from './view/view-event-bus';
 
 export interface IEventStore {
@@ -20,6 +21,7 @@ export class StoreEventBus implements IEventBus {
   ) {}
 
   async publishAsync<T extends IEvent>(event: T): Promise<void> {
+    debug('publishAsync');
     const storableEvent = (event as any) as StorableEvent;
     if (
       storableEvent.id === undefined ||

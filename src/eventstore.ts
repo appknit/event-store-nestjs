@@ -6,6 +6,7 @@ import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
 import * as shortUuid from 'short-uuid'
+import { debug } from './util';
 
 export class EventStore {
   private readonly eventstore;
@@ -106,11 +107,13 @@ export class EventStore {
       return this.eventstore.getEvents(aggregate, id);
     }
 
-    return new Promise<StorableEvent[]>(resolve => {
+    return new Promise<StorableEvent[]>((resolve, reject) => {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
-          // snapshot.data; // Snapshot
+          if (!err){
+            reject(err)
+          }
           resolve(
             stream.events.map(event =>
               this.getStorableEventFromPayload(event.payload, event.streamRevision),
@@ -130,13 +133,18 @@ export class EventStore {
     //   return this.eventstore.getFromSnapshot(this.getAggregateId(aggregate, id));
     // }
 
-    return new Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}>(resolve => {
+    return new Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}>((resolve, reject) => {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
+          if (!err){
+            reject(err)
+          }
+      
           const history = stream.events.map(event =>
             this.getStorableEventFromPayload(event.payload, event.streamRevision),
           );
+
           // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
           // @ts-ignore
           resolve({ snapshot, history });
@@ -162,10 +170,13 @@ export class EventStore {
       commitStamp: new Date(),
       data,
     };
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       this.eventstore.createSnapshot(snapshot, (err) => {
-        if (err) console.error(err);
-        resolve();
+        if (err) {
+          console.error(err);
+          reject(err)
+        }
+        resolve(undefined);
       })
     });
   }
@@ -177,6 +188,9 @@ export class EventStore {
 
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
+        if (!err){
+          reject(err)
+        }
         if (events.length > 0) {
           resolve(this.getStorableEventFromPayload(events[0].payload, events[0].streamRevision));
         } else {
@@ -187,6 +201,7 @@ export class EventStore {
   }
 
   public async storeEvent<T extends StorableEvent>(event: T): Promise<void> {
+    debug(`storeEvent -> ${event.eventName}`);
     return new Promise<void>((resolve, reject) => {
       if (!this.eventStoreLaunched) {
         reject('Event Store not launched!');
@@ -207,7 +222,11 @@ export class EventStore {
             reject(err);
             return;
           }
-          stream.addEvent(event);
+          try {
+            stream.addEvent(event);
+          } catch (error) {
+            reject(error)
+          }
           stream.commit(commitErr => {
             if (commitErr) {
               reject(commitErr);

@@ -3,6 +3,7 @@ import * as shortid from 'short-uuid';
 
 import { OracleConfig } from '../interfaces/oracle';
 import { StorableEvent } from '../interfaces';
+import { debug } from 'src/util';
 
 const oracleConfig: OracleConfig = {
   user: 'system',
@@ -48,6 +49,7 @@ const init = async () => {
     // const events = await eventstore.getEventsSince(commitStamp);
     // console.log('events:', events);
   } catch (err) {
+    debug('init error');
     console.error(err)
   }
 };
