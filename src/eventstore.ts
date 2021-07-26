@@ -114,7 +114,7 @@ export class EventStore {
           if (err){
             reject(err)
           }
-          
+
           resolve(
             stream.events ? stream.events.map(event =>
               this.getStorableEventFromPayload(event.payload, event.streamRevision),
@@ -189,7 +189,7 @@ export class EventStore {
 
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
-        if (!err){
+        if (err){
           reject(err)
         }
         if (events.length > 0) {
