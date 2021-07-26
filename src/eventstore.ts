@@ -112,9 +112,9 @@ export class EventStore {
         (err, snapshot, stream) => {
           // snapshot.data; // Snapshot
           resolve(
-            stream.events.map(event =>
+            stream.events ? stream.events.map(event =>
               this.getStorableEventFromPayload(event.payload, event.streamRevision),
-            ),
+            ) : [],
           );
         },
       );
