@@ -134,11 +134,9 @@ export class EventStore {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
-          const history = stream.events.map(event =>
+          const history = stream.events ? stream.events.map(event =>
             this.getStorableEventFromPayload(event.payload, event.streamRevision),
-          );
-          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-          // @ts-ignore
+          ) : [];
           resolve({ snapshot, history });
         },
       );
@@ -162,9 +160,12 @@ export class EventStore {
       commitStamp: new Date(),
       data,
     };
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
       this.eventstore.createSnapshot(snapshot, (err) => {
-        if (err) console.error(err);
+        if (err) {
+          console.error(err);
+          reject(err);
+        }
         resolve();
       })
     });
