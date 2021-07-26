@@ -5,7 +5,7 @@ import { OracleEventStore, SnapshotRecord } from './oracle';
 import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
-import * as shortUuid from 'short-uuid';
+import * as shortUuid from 'short-uuid'
 import { debug } from './util';
 
 export class EventStore {
@@ -40,7 +40,7 @@ export class EventStore {
       type: 'mongodb',
       options: {
         ssl: false,
-      },
+      }
     };
 
     if (typeof config.dialect === 'string' && isSupported(config.dialect)) {
@@ -111,13 +111,14 @@ export class EventStore {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
-          if (!err) {
-            reject(err);
+          if (err){
+            reject(err)
           }
+          
           resolve(
-            stream.events?.map(event =>
+            stream.events ? stream.events.map(event =>
               this.getStorableEventFromPayload(event.payload, event.streamRevision),
-            ),
+            ) : [],
           );
         },
       );
@@ -127,26 +128,27 @@ export class EventStore {
   public async getFromSnapshot(
     aggregate: string,
     id: string,
-  ): Promise<{ snapshot: SnapshotRecord, history: StorableEvent[] }> {
+  ): Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}> {
     // TODO: Fix getEvents for Oracle, not implemented
     // if (this.oracleEventstore) {
     //   return this.eventstore.getFromSnapshot(this.getAggregateId(aggregate, id));
     // }
 
-    return new Promise<{ snapshot: SnapshotRecord, history: StorableEvent[] }>((resolve, reject) => {
+    return new Promise<{ snapshot: SnapshotRecord, history: StorableEvent[]}>((resolve, reject) => {
       this.eventstore.getFromSnapshot(
         this.getAggregateId(aggregate, id),
         (err, snapshot, stream) => {
-          if (!err) {
-            reject(err);
+          if (err){
+            reject(err)
           }
+
+          const history = stream.events ? stream.events.map(event =>
+            this.getStorableEventFromPayload(event.payload, event.streamRevision),
+          ) : [];
+
           // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
           // @ts-ignore
-          resolve({
-            snapshot, history: stream.events?.map(event =>
-              this.getStorableEventFromPayload(event.payload, event.streamRevision),
-            ),
-          });
+          resolve({ snapshot, history });
         },
       );
     });
@@ -173,10 +175,10 @@ export class EventStore {
       this.eventstore.createSnapshot(snapshot, (err) => {
         if (err) {
           console.error(err);
-          reject(err);
+          reject(err)
         }
         resolve(undefined);
-      });
+      })
     });
   }
 
@@ -187,8 +189,8 @@ export class EventStore {
 
     return new Promise<StorableEvent>((resolve, reject) => {
       this.eventstore.getEvents(index, 1, (err, events) => {
-        if (!err) {
-          reject(err);
+        if (!err){
+          reject(err)
         }
         if (events.length > 0) {
           resolve(this.getStorableEventFromPayload(events[0].payload, events[0].streamRevision));
@@ -224,7 +226,7 @@ export class EventStore {
           try {
             stream.addEvent(event);
           } catch (error) {
-            reject(error);
+            reject(error)
           }
           stream.commit(commitErr => {
             if (commitErr) {
