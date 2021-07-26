@@ -115,9 +115,9 @@ export class EventStore {
             reject(err)
           }
           resolve(
-            stream.events.map(event =>
+            stream.events ? stream.events.map(event =>
               this.getStorableEventFromPayload(event.payload, event.streamRevision),
-            ),
+            ) : [],
           );
         },
       );
@@ -140,11 +140,9 @@ export class EventStore {
           if (!err){
             reject(err)
           }
-      
-          const history = stream.events.map(event =>
+          const history = stream.events ? stream.events.map(event =>
             this.getStorableEventFromPayload(event.payload, event.streamRevision),
-          );
-
+          ) : [];
           // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
           // @ts-ignore
           resolve({ snapshot, history });
