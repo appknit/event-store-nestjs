@@ -6,7 +6,6 @@ import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
 import * as shortUuid from 'short-uuid'
-import { debug } from './util';
 
 export class EventStore {
   private readonly eventstore;
@@ -202,7 +201,6 @@ export class EventStore {
   }
 
   public async storeEvent<T extends StorableEvent>(event: T): Promise<void> {
-    debug(`storeEvent -> ${event.eventName}`);
     return new Promise<void>((resolve, reject) => {
       if (!this.eventStoreLaunched) {
         reject('Event Store not launched!');
