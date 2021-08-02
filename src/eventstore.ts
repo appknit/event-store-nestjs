@@ -141,7 +141,7 @@ export class EventStore {
             reject(err)
           }
 
-          const history = stream.events ? stream.events.map(event =>
+          const history = stream && stream.events ? stream.events.map(event =>
             this.getStorableEventFromPayload(event.payload, event.streamRevision),
           ) : [];
 
