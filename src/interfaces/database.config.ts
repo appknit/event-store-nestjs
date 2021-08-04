@@ -7,7 +7,8 @@ export enum supportedDatabases {
   // dynamodb = 'dynamodb',
 }
 
-export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbname]
+export const isSupported = (dbname: string): boolean =>
+  !!supportedDatabases[dbname];
 
 // NOTE: DBs supported by eventstore - [inmemory, mongodb, redis, tingodb, elasticsearch, azuretable, dynamodb]
 
@@ -36,5 +37,5 @@ export interface DatabaseConfig {
   options?: {
     ssl: boolean;
     [key: string]: unknown;
-  }
+  };
 }

@@ -1,3 +1,4 @@
+import * as eventStore from 'eventstore';
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
@@ -9,11 +10,15 @@ import * as shortUuid from 'short-uuid'
 import { debug } from './util';
 
 export class EventStore {
-  private readonly eventstore;
+  private eventstore: typeof eventStore;
   private oracleEventstore = false;
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
+    this.initEventStore(config);
+  }
+
+  private initEventStore(config: DatabaseConfig) {
     if (OracleEventStore.isOracleDatabase(config) && config as OracleConfig) {
       const oracleConfig = this.parseOracleConfig(config);
       this.eventstore = new OracleEventStore(oracleConfig);
@@ -22,35 +27,49 @@ export class EventStore {
         this.eventStoreLaunched = true;
       });
     } else {
-      const eventstoreConfig = this.parseDatabaseConfig(config);
-      this.eventstore = eventstore(eventstoreConfig);
-      this.eventstore.init(err => {
-        if (err) {
-          throw err;
-        }
-        this.eventStoreLaunched = true;
-      });
+      switch (config.dialect) {
+        case supportedDatabases.mongodb:
+          const eventStoreConfig = this.parseDatabaseConfig(config);
+          this.eventstore = eventStore(eventStoreConfig);
+          this.eventstore.init(err => {
+            if (err) {
+              throw err;
+            }
+            this.eventStoreLaunched = true;
+          });
+          break;
+      }
     }
   }
 
-  private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
+  private parseDatabaseConfig(
+    config: DatabaseConfig,
+  ): EventSourcingGenericOptions {
     let parsed: url.UrlWithParsedQuery;
 
     const eventstoreConfig: EventSourcingGenericOptions = {
       type: 'mongodb',
       options: {
         ssl: false,
-      }
+      },
     };
+
+    if (config.options) {
+      eventstoreConfig.options = config.options;
+    }
 
     if (typeof config.dialect === 'string' && isSupported(config.dialect)) {
       eventstoreConfig.type = config.dialect;
     }
 
     if (config.uri) {
-      parsed = url.parse(config.uri, true);
-      eventstoreConfig.host = parsed.hostname;
-      eventstoreConfig.port = +parsed.port;
+      if (config.dialect === 'mongodb') {
+        eventstoreConfig.url = config.uri;
+      } else {
+        parsed = url.parse(config.uri, true);
+        eventstoreConfig.host = parsed.hostname;
+        eventstoreConfig.port = +parsed.port;
+      }
     } else {
       if (config.host) {
         eventstoreConfig.host = config.host;

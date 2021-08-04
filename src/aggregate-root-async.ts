@@ -16,23 +16,27 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
     return this[IS_AUTO_COMMIT_ENABLED];
   }
 
-  publish<T extends EventBase = EventBase>(event: T) {}
+  publish<T extends EventBase = EventBase>(event: T): void {}
 
-  async publishAsync <T extends EventBase = EventBase>(event: T): Promise<void> {}
+  async publishAsync<T extends EventBase = EventBase>(
+    event: T,
+  ): Promise<void> {}
 
-  commit() {
-    this[INTERNAL_EVENTS].forEach((event) => this.publish(event));
+  commit(): void {
+    this[INTERNAL_EVENTS].forEach(event => this.publish(event));
     this[INTERNAL_EVENTS].length = 0;
   }
 
   async commitAsync(): Promise<void> {
     debug('commitAsync')
-    const publishPromises = this[INTERNAL_EVENTS].map((event) => this.publishAsync(event));
+    const publishPromises = this[INTERNAL_EVENTS].map(event =>
+      this.publishAsync(event),
+    );
     await Promise.all(publishPromises);
     this[INTERNAL_EVENTS].length = 0;
   }
 
-  uncommit() {
+  uncommit(): void {
     this[INTERNAL_EVENTS].length = 0;
   }
 
@@ -40,8 +44,8 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
     return this[INTERNAL_EVENTS];
   }
 
-  loadFromHistory(history: EventBase[]) {
-    history.forEach((event) => this.apply(event, true));
+  loadFromHistory(history: EventBase[]): void {
+    history.forEach(event => this.apply(event, true));
   }
 
   loadFromSnapshot({ snapshot, history }) {
@@ -51,7 +55,10 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
     history.forEach((event) => this.apply(event, true));
   }
 
-  apply<T extends EventBase = EventBase>(event: T, isFromHistory = false) {
+  apply<T extends EventBase = EventBase>(
+    event: T,
+    isFromHistory = false,
+  ): AggregateRootAsync {
     if (!isFromHistory && !this.autoCommit) {
       this[INTERNAL_EVENTS].push(event);
     }
@@ -64,12 +71,12 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
 
   private getEventHandler<T extends EventBase = EventBase>(
     event: T,
-  ): Function | undefined {
+  ): (...args: any) => any | undefined {
     const handler = `on${this.getEventName(event)}`;
     return this[handler];
   }
 
-  protected getEventName(event: any): string {
+  protected getEventName<T extends EventBase = EventBase>(event: T): string {
     const { constructor } = Object.getPrototypeOf(event);
     return constructor.name as string;
   }
