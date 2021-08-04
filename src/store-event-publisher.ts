@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { StoreEventBus, IEventStore } from './store-event-bus';
 import { IEvent } from '@nestjs/cqrs';
 import { AggregateRootAsync } from './aggregate-root-async';
-import { debug } from './util';
 
 export interface Constructor<T> {
   new (...args: any[]): T;
@@ -15,7 +14,6 @@ export class StoreEventPublisher<EventBase extends IEvent = IEvent> {
   mergeClassContext<T extends Constructor<AggregateRootAsync<EventBase>>>(
     metatype: T,
   ): T {
-    debug('mergeClassContext');
     const eventBus = this.eventBus;
     return class extends metatype {
       constructor(...args) {
@@ -40,7 +38,6 @@ export class StoreEventPublisher<EventBase extends IEvent = IEvent> {
   }
 
   mergeObjectContext<T extends AggregateRootAsync<EventBase>>(object: T): T {
-    debug('mergeObjectContext');
     const eventBus = this.eventBus;
     object.publish = (event: IEvent) => {
       eventBus.publish(event, object);
