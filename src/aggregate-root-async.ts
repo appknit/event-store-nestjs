@@ -1,5 +1,4 @@
 import { IEvent } from '@nestjs/cqrs/dist/interfaces';
-import { debug } from './util';
 
 const INTERNAL_EVENTS = Symbol();
 const IS_AUTO_COMMIT_ENABLED = Symbol();
@@ -28,7 +27,6 @@ export abstract class AggregateRootAsync<EventBase extends IEvent = IEvent> {
   }
 
   async commitAsync(): Promise<void> {
-    debug('commitAsync')
     const publishPromises = this[INTERNAL_EVENTS].map(event =>
       this.publishAsync(event),
     );
