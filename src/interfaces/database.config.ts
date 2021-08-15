@@ -30,6 +30,7 @@ export interface DatabaseConfig {
   connectString?: string;
   host?: string;
   hostname?: string;
+  dbName: string;
   servicename?: string;
   port?: number;
   snapshotsCollectionName?: string;
