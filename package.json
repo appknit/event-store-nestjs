@@ -27,7 +27,7 @@
     "elasticsearch": "^16.7.1",
     "eventstore": "^1.15.5",
     "lodash": "^4.17.21",
-    "mongodb": "^4.1.0",
+    "mongodb": "^4.0.1",
     "oracledb": "^5.0.0",
     "redis": "^3.0.2",
     "short-uuid": "^4.1.0"
