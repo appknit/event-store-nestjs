@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { IEvent } from '@nestjs/cqrs/dist/interfaces';
-import { EventStore } from './eventstore';
+import { EventStore, parseHrtimeToSeconds } from './eventstore';
 import { StorableEvent } from './interfaces';
 import { IExtendedEventBus, ViewEventBus } from './view';
 import { AggregateRootAsync } from './aggregate-root-async';
 
 export interface IEventStore {
-    isInitiated(): boolean;
-    getEvents(aggregate: string, id: string): Promise<any[]>;
-    // getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
-    getEvent(number): Promise<StorableEvent>;
-    storeEvent<T extends StorableEvent>(event: T): Promise<void>;
+  isInitiated(): boolean;
+  getEvents(aggregate: string, id: string): Promise<any[]>;
+  // getEvents(aggregate: string, id: string): Promise<StorableEvent[]>;
+  getEvent(number): Promise<StorableEvent>;
+  storeEvent<T extends StorableEvent>(event: T): Promise<void>;
 }
 
 @Injectable()
@@ -33,8 +33,13 @@ export class StoreEventBus implements IExtendedEventBus {
       throw new Error('Events must implement StorableEvent interface');
     }
     try {
+      const storeEvent = process.hrtime();
       await this.eventStore.storeEvent(storableEvent);
-      return this.eventBus.publish(event, rootAggregator);
+      console.log(`StoreEventBus->storeEvent took time: ${parseHrtimeToSeconds(process.hrtime(storeEvent))}`);
+      const publish = process.hrtime();
+      const publishRes = this.eventBus.publish(event, rootAggregator);
+      console.log(`StoreEventBus->publish took time: ${parseHrtimeToSeconds(process.hrtime(publish))}`);
+      return publishRes;
     } catch (err) {
       throw err;
     }

@@ -3,10 +3,13 @@ import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
 import { OracleEventStore, SnapshotRecord } from './oracle';
-import * as eventstore from 'eventstore';
 import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
 import * as shortUuid from 'short-uuid'
+
+export function parseHrtimeToSeconds(hrtime): number {
+  return Number((hrtime[0] + hrtime[1] / 1e9).toFixed(3)); // in seconds
+}
 
 export class EventStore {
   private eventstore: typeof eventStore;
@@ -230,6 +233,7 @@ export class EventStore {
         return this.eventstore.storeEvent(event);
       }
 
+      const getEventStream = process.hrtime();
       this.eventstore.getEventStream(
         {
           aggregateId: this.getAggregateId(event.eventAggregate, event.id),
@@ -241,18 +245,23 @@ export class EventStore {
             return;
           }
           try {
+            const addEvent = process.hrtime();
             stream.addEvent(event);
+            console.log(`storeEvent->addEvent took time: ${parseHrtimeToSeconds(process.hrtime(addEvent))}`);
           } catch (error) {
             reject(error)
           }
+          const commit = process.hrtime();
           stream.commit(commitErr => {
             if (commitErr) {
               reject(commitErr);
             }
             resolve();
           });
+          console.log(`storeEvent->commit took time: ${parseHrtimeToSeconds(process.hrtime(commit))}`);
         },
       );
+      console.log(`storeEvent->getEventStream took time: ${parseHrtimeToSeconds(process.hrtime(getEventStream))}`);
     });
   }
 
