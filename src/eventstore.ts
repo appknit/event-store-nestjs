@@ -233,6 +233,7 @@ export class EventStore {
         return this.eventstore.storeEvent(event);
       }
 
+      console.log('EVENT', event);
       const getEventStream = process.hrtime();
       this.eventstore.getEventStream(
         {
