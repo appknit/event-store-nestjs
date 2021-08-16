@@ -240,6 +240,7 @@ export class EventStore {
           aggregate: event.eventAggregate,
         },
         (err, stream) => {
+          console.log(`storeEvent->getEventStream took time: ${parseHrtimeToSeconds(process.hrtime(getEventStream))}`);
           if (err) {
             reject(err);
             return;
@@ -261,7 +262,6 @@ export class EventStore {
           console.log(`storeEvent->commit took time: ${parseHrtimeToSeconds(process.hrtime(commit))}`);
         },
       );
-      console.log(`storeEvent->getEventStream took time: ${parseHrtimeToSeconds(process.hrtime(getEventStream))}`);
     });
   }
 
