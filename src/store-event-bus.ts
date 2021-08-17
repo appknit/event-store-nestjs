@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { IEvent } from '@nestjs/cqrs/dist/interfaces';
-import { EventStore, parseHrtimeToSeconds } from './eventstore';
+import { EventStore } from './eventstore';
 import { StorableEvent } from './interfaces';
 import { IExtendedEventBus, ViewEventBus } from './view';
 import { AggregateRootAsync } from './aggregate-root-async';

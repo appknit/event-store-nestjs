@@ -7,10 +7,6 @@ import * as url from 'url';
 import { OracleConfig } from './interfaces/oracle';
 import * as shortUuid from 'short-uuid'
 
-export function parseHrtimeToSeconds(hrtime): number {
-  return Number((hrtime[0] + hrtime[1] / 1e9).toFixed(3)); // in seconds
-}
-
 export class EventStore {
   private eventstore: typeof eventStore;
   private oracleEventstore = false;
