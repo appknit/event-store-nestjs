@@ -234,8 +234,6 @@ export class EventStore {
       }
 
       const revMin = event.revision ? event.revision : 0;
-      console.log('EVENT', event);
-      const getEventStream = process.hrtime();
       this.eventstore.getEventStream(
         {
           aggregateId: this.getAggregateId(event.eventAggregate, event.id),
@@ -243,26 +241,21 @@ export class EventStore {
         },
         revMin,
         (err, stream) => {
-          console.log(`storeEvent->getEventStream took time: ${parseHrtimeToSeconds(process.hrtime(getEventStream))}`);
           if (err) {
             reject(err);
             return;
           }
           try {
-            const addEvent = process.hrtime();
             stream.addEvent(event);
-            console.log(`storeEvent->addEvent took time: ${parseHrtimeToSeconds(process.hrtime(addEvent))}`);
           } catch (error) {
             reject(error)
           }
-          const commit = process.hrtime();
           stream.commit(commitErr => {
             if (commitErr) {
               reject(commitErr);
             }
             resolve();
           });
-          console.log(`storeEvent->commit took time: ${parseHrtimeToSeconds(process.hrtime(commit))}`);
         },
       );
     });

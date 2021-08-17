@@ -33,13 +33,8 @@ export class StoreEventBus implements IExtendedEventBus {
       throw new Error('Events must implement StorableEvent interface');
     }
     try {
-      const storeEvent = process.hrtime();
       await this.eventStore.storeEvent(storableEvent);
-      console.log(`StoreEventBus->storeEvent took time: ${parseHrtimeToSeconds(process.hrtime(storeEvent))}`);
-      const publish = process.hrtime();
-      const publishRes = this.eventBus.publish(event, rootAggregator);
-      console.log(`StoreEventBus->publish took time: ${parseHrtimeToSeconds(process.hrtime(publish))}`);
-      return publishRes;
+      return this.eventBus.publish(event, rootAggregator);
     } catch (err) {
       throw err;
     }
