@@ -233,6 +233,7 @@ export class EventStore {
         return this.eventstore.storeEvent(event);
       }
 
+      const revMin = event.revision ? event.revision : 0;
       console.log('EVENT', event);
       const getEventStream = process.hrtime();
       this.eventstore.getEventStream(
@@ -240,6 +241,7 @@ export class EventStore {
           aggregateId: this.getAggregateId(event.eventAggregate, event.id),
           aggregate: event.eventAggregate,
         },
+        revMin,
         (err, stream) => {
           console.log(`storeEvent->getEventStream took time: ${parseHrtimeToSeconds(process.hrtime(getEventStream))}`);
           if (err) {
