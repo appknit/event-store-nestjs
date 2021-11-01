@@ -4,6 +4,7 @@ import * as shortid from 'short-uuid';
 import { StorableEvent } from '../interfaces/storable-event';
 import { OracleConfig, OracleConnectionOptions } from '../interfaces/oracle';
 import { DatabaseConfig } from '../interfaces/database.config';
+import { SnapshotRecord, Payload } from '../interfaces/record';
 import tableCreationsScripts from './tables';
 
 export interface IEventStore {
@@ -20,33 +21,6 @@ const DEFAULT_OUTPUT_OPTIONS = { outFormat: oracledb.OUT_FORMAT_OBJECT };
 
 export const TIMESTAMP_FORMAT = 'YYYY-MM-DD HH:mm:ss';
 export const DATE_FORMAT = 'DD-MMM-YY';
-
-type Payload = Record<string, any> | null;
-
-export interface EventRecord {
-  id?: string;          //              VARCHAR2(64) PRIMARY KEY,
-  streamId?: string;    //        VARCHAR2(256) NOT NULL,
-  aggregateId?: string; //     VARCHAR2(256) NOT NULL,
-  aggregate?: string;   //       VARCHAR2(128) NOT NULL,
-  context?: string;     //         VARCHAR2(256),
-  commitId?: string;    //        VARCHAR2(256) NOT NULL,
-  payload?: Payload;     //         VARCHAR2 (4000)
-  commitSequence: number; //  NUMBER DEFAULT 0,
-  commitStamp: Date;   //  DATE DEFAULT (sysdate),
-  restInCommitStream: boolean; // NUMBER(1) DEFAULT 0,
-  dispatched: boolean;      // NUMBER(1) DEFAULT 0
-}
-
-export interface SnapshotRecord {
-  snapshotId: string,
-  aggregateId?: string,
-  aggregate?: string,
-  context?: string,
-  revision: number,
-  version: number,
-  commitStamp: Date,
-  data?: Payload;
-}
 
 export const EventStoreLaunchError = new Error('Event store not launched');
 
