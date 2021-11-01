@@ -1,6 +1,6 @@
 {
   "name": "event-sourcing-nestjs",
-  "version": "1.2.11",
+  "version": "1.3.0",
   "description": "NestJS module for implementing Event Sourcing.",
   "main": "index.js",
   "scripts": {
@@ -18,14 +18,12 @@
   },
   "dependencies": {
     "@types/node": "^13.5.0",
-    "@types/oracledb": "^5.0.0",
     "debug": "^4.3.2",
     "dot-prop": "^5.2.0",
     "elasticsearch": "^16.7.1",
     "eventstore": "^1.15.2",
     "lodash": "^4.17.21",
     "mongodb": "^3.5.9",
-    "oracledb": "^5.0.0",
     "redis": "^3.0.2",
     "short-uuid": "^3.1.1"
   },
