@@ -1,11 +1,13 @@
+import * as eventstore from 'eventstore';
+import * as url from 'url';
+import * as shortUuid from 'short-uuid'
+
 import { StorableEvent } from './interfaces/storable-event';
 import { DatabaseConfig, isSupported, supportedDatabases } from './interfaces/database.config';
 import { EventSourcingGenericOptions } from './interfaces/eventsourcing.options';
-import { OracleEventStore, SnapshotRecord } from './oracle';
-import * as eventstore from 'eventstore';
-import * as url from 'url';
-import { OracleConfig } from './interfaces/oracle';
-import * as shortUuid from 'short-uuid'
+import { SnapshotRecord } from './interfaces/record';
+// import { OracleEventStore } from './oracle';
+// import { OracleConfig } from './interfaces/oracle';
 
 export class EventStore {
   private readonly eventstore;
@@ -13,6 +15,16 @@ export class EventStore {
   private eventStoreLaunched = false;
 
   constructor(config: DatabaseConfig) {
+    const eventstoreConfig = this.parseDatabaseConfig(config);
+    this.eventstore = eventstore(eventstoreConfig);
+    this.eventstore.init(err => {
+      if (err) {
+        throw err;
+      }
+      this.eventStoreLaunched = true;
+    });
+
+    /*
     if (OracleEventStore.isOracleDatabase(config) && config as OracleConfig) {
       const oracleConfig = this.parseOracleConfig(config);
       this.eventstore = new OracleEventStore(oracleConfig);
@@ -30,6 +42,7 @@ export class EventStore {
         this.eventStoreLaunched = true;
       });
     }
+    */
   }
 
   private parseDatabaseConfig(config: DatabaseConfig): EventSourcingGenericOptions {
@@ -78,6 +91,7 @@ export class EventStore {
     return eventstoreConfig;
   }
 
+  /*
   private parseOracleConfig(config: DatabaseConfig): OracleConfig {
     const { user, password, hostname, servicename, connectString } = config;
     const oracleConfig: OracleConfig = {
@@ -93,6 +107,7 @@ export class EventStore {
     }
     return oracleConfig;
   }
+  */
 
   public isInitiated(): boolean {
     return this.eventStoreLaunched;

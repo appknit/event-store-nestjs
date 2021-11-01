@@ -3,7 +3,7 @@ export enum supportedDatabases {
   redis = 'redis',
   elasticsearch = 'elasticsearch',
   inmemory = 'inmemory',
-  oracledb = 'oracledb',
+  // oracledb = 'oracledb',
   // dynamodb = 'dynamodb',
 }
 
