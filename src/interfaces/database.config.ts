@@ -3,11 +3,12 @@ export enum supportedDatabases {
   redis = 'redis',
   elasticsearch = 'elasticsearch',
   inmemory = 'inmemory',
-  oracledb = 'oracledb',
+  // oracledb = 'oracledb',
   // dynamodb = 'dynamodb',
 }
 
-export const isSupported = (dbname: string): boolean => !!supportedDatabases[dbname]
+export const isSupported = (dbname: string): boolean =>
+  !!supportedDatabases[dbname];
 
 // NOTE: DBs supported by eventstore - [inmemory, mongodb, redis, tingodb, elasticsearch, azuretable, dynamodb]
 
@@ -29,6 +30,7 @@ export interface DatabaseConfig {
   connectString?: string;
   host?: string;
   hostname?: string;
+  dbName: string;
   servicename?: string;
   port?: number;
   snapshotsCollectionName?: string;
@@ -36,5 +38,5 @@ export interface DatabaseConfig {
   options?: {
     ssl: boolean;
     [key: string]: unknown;
-  }
+  };
 }
